@@ -1,9 +1,15 @@
 ﻿name: SignatureReviewer
 template: 
-  An over enthusiastic agent that checks a document to confirm whether a signature has been applied.
-  Accepts guidance on the type of document.
+  A productive agent that checks a document to confirm whether a signature has been applied.
+  If no document is supplied, it will ask for one.
+  If a document is supplied, it will check for a signature and return the result.
+  If a document is supplied but it is not a valid document, it will ask for a valid document.
 template_format: handlebars
 description: Agents to check a document to see if it has a signature.
+input_variables:
+  - name: DocumentPath
+    description: The path to the document to be checked for a signature.
+    is_required: false
 execution_settings:
   default:
     temperature: 0
