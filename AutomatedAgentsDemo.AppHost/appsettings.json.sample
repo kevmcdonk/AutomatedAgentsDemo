@@ -1,0 +1,32 @@
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning",
+      "Aspire.Hosting.Dcp": "Warning"
+    }
+  },
+  "ConnectionStrings": {
+    "AzureOpenAI": "Endpoint=https://XXXXXX.openai.azure.com;Key=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+  },
+  "AIServices": {
+    "AzureOpenAIChat": {
+      "DeploymentName": "DEPLNAMECHATXXXXX",
+      "ModelName": "gpt-4o",
+      "ModelVersion": "2024-08-06",
+      "SkuCapacity": 20
+    },
+    "AzureOpenAIEmbeddings": {
+      "DeploymentName": "DEPLNAMEEMBEDDINGSXXXXX",
+      "ModelName": "text-embedding-3-large",
+      "ModelVersion": "1",
+      "SkuCapacity": 20
+    }
+  },
+  "AIChatService": "AzureOpenAIChat",
+  "Rag": {
+    "AIEmbeddingService": "AzureOpenAIEmbeddings",
+    "CollectionName": "",
+    "VectorStoreType": "AzureAISearch"
+  }
+}
