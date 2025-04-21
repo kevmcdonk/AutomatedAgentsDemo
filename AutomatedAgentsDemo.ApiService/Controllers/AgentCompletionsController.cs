@@ -52,7 +52,7 @@ public sealed class AgentCompletionsController : ControllerBase
             ["question"] = request.Prompt
         };
 
-        request.ChatHistory.AddUserMessage(request.Prompt);
+        //request.ChatHistory.AddUserMessage(request.Prompt);
         _groupChat.AddChatMessage(new ChatMessageContent(AuthorRole.User, request.Prompt));
 
         if (request.IsStreaming)
@@ -92,10 +92,17 @@ public sealed class AgentCompletionsController : ControllerBase
         var thread = new ChatHistoryAgentThread(chatHistory);
 
         IAsyncEnumerable<StreamingChatMessageContent> content = _groupChat.InvokeStreamingAsync(cancellationToken: cancellationToken);
+        
+        if (content == null)
+        {
+
+            yield return new StreamingChatMessageContent(AuthorRole.System, "Connection disconnected.");
+        } else {
         //thread, options: new() { KernelArguments = arguments }, 
         await foreach (StreamingChatMessageContent item in content.ConfigureAwait(false))
         {
             yield return item;
+        }
         }
         
     }
@@ -113,14 +120,5 @@ public sealed class AgentCompletionsController : ControllerBase
                 throw new ArgumentException("A system message is provided by the agent and should not be included in the chat history.");
             }
         }
-    }
-
-#pragma warning disable SKEXP0110 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
-    private sealed class ApprovalTerminationStrategy : TerminationStrategy
-#pragma warning restore SKEXP0110 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
-    {
-        // Terminate when the final message contains the term "approve"
-        protected override Task<bool> ShouldAgentTerminateAsync(Agent agent, IReadOnlyList<ChatMessageContent> history, CancellationToken cancellationToken)
-            => Task.FromResult(history[history.Count - 1].Content?.Contains("approve", StringComparison.OrdinalIgnoreCase) ?? false);
     }
 }

@@ -6,16 +6,29 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <NoWarn>$(NoWarn);CA2007;IDE1006;SKEXP0001;SKEXP0110;OPENAI001</NoWarn>
+  </PropertyGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\AutomatedAgentsDemo.ServiceDefaults\AutomatedAgentsDemo.ServiceDefaults.csproj" />
     <ProjectReference Include="..\AutomatedAgentsDemo.Configuration\AutomatedAgentsDemo.Configuration.csproj" IsAspireProjectResource="false" />
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="Resources\01-AutomationCrewLeader.yaml">
+    <EmbeddedResource Include="Resources\Agent01-AutomationCrewLeader.yaml">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </EmbeddedResource>
-    <EmbeddedResource Include="Resources\100-SignatureReviewer.yaml">
+    <EmbeddedResource Include="Resources\Agent100-SignatureReviewer.yaml">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Resources\Agent101-LeaveReviewer.yaml">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Resources\PromptFunction-SelectionStrategy.yaml">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Resources\PromptFunction-TerminationStrategy.yaml">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </EmbeddedResource>
   </ItemGroup>
@@ -25,8 +38,9 @@
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.2" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="9.0.3" />
     <PackageReference Include="Microsoft.SemanticKernel" Version="1.45.0" />
-    <PackageReference Include="Microsoft.SemanticKernel.Abstractions" Version="1.45.0" />
+    <PackageReference Include="Microsoft.SemanticKernel.Abstractions" Version="1.46.0" />
     <PackageReference Include="Microsoft.SemanticKernel.Agents.core" Version="1.45.0" />
+    <PackageReference Include="Microsoft.SemanticKernel.Agents.OpenAI" Version="1.46.0-preview" />
     <PackageReference Include="Microsoft.SemanticKernel.PromptTemplates.Handlebars" Version="1.45.0" />
     <PackageReference Include="Microsoft.SemanticKernel.Yaml" Version="1.45.0" />
   </ItemGroup>

@@ -1,0 +1,11 @@
+name: TerminationStrategy
+template:
+    Determine if the agent asks a question or says the task is complete.
+    If either of these are true, return "true".
+    If the agent says the task is not complete or there is no question, return "false".
+
+    History:
+    {{$history}}
+template_format: semantic-kernel
+description: A function that generates a story about a topic.
+

@@ -1,0 +1,14 @@
+name: SelectionStrategy
+template:
+    State the name of the next participant in the conversation based on the following rules:
+        - The first participant should be the AutomationCrewLeader who will take the lead in the conversation.
+        - If the AutomationCrewLeader was the last person to speak, the next participant should be taken from their suggestion.
+        - If the next participant cannot be determined from the AutomationCrewLeader, the next participant should be the determined with the following guidance:
+            - If the request is about a submitted document, reply with "SignatureReviewer"
+            - If the request is about a leave query, reply with "LeaveReviewer"
+        - If the other agents are not needed, do not select them
+    History:
+    {{$history}}
+template_format: semantic-kernel
+description: A function that generates a story about a topic.
+

@@ -15,6 +15,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Agents;
+using Microsoft.SemanticKernel.Agents.OpenAI;
 using Microsoft.SemanticKernel.Data;
 using Microsoft.SemanticKernel.PromptTemplates.Handlebars;
 using AutomatedAgentsDemo.ApiService.Config;
@@ -23,6 +24,11 @@ using System.Reflection;
 using Microsoft.SemanticKernel.Agents.Chat;
 using System.Linq;
 using Microsoft.SemanticKernel.ChatCompletion;
+using Azure.AI.OpenAI;
+using OpenAI.Assistants;
+using Microsoft.AspNetCore.Mvc.TagHelpers;
+using System.Linq.Expressions;
+using OpenAI.Responses;
 #pragma warning disable SKEXP0001
 #pragma warning disable SKEXP0010
 
@@ -209,88 +215,145 @@ public static class Program
         /*if (string.IsNullOrEmpty(config.Rag.CollectionName))
         {*/
         var agents = GetAgentTemplates();
-        List<ChatCompletionAgent> agentList = new List<ChatCompletionAgent>();
+        List<OpenAIAssistantAgent> agentList = new List<OpenAIAssistantAgent>();
 
 #pragma warning disable SKEXP0110 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+#pragma warning disable OPENAI001
 
         builder.Services.AddTransient<AgentGroupChat>((sp) =>
             {
-                Kernel kernel = sp.GetRequiredService<Kernel>();
-                foreach (var agent in agents)
+                try
                 {
-                    PromptTemplateConfig templateConfig = Microsoft.SemanticKernel.KernelFunctionYaml.ToPromptTemplateConfig(agent.Value);
-                    // Register each agent with the template name as the key and the template content as the value.
-                    agentList.Add(new ChatCompletionAgent(templateConfig, new HandlebarsPromptTemplateFactory())
+                    Kernel kernel = sp.GetRequiredService<Kernel>();
+
+                    // AzureOpenAIClient client = OpenAIAssistantAgent.CreateAzureOpenAIClient(new AzureCredential(), new Uri(config.AzureOpenAIEndpoint));
+                    AzureOpenAIClient client = OpenAIAssistantAgent.CreateAzureOpenAIClient(new InteractiveBrowserCredential(), new Uri(config.AzureOpenAIEndpoint));
+                    AssistantClient assistantClient = client.GetAssistantClient();
+
+                    //foreach (var agent in agents)
+                    //{
+                        //PromptTemplateConfig templateConfig = Microsoft.SemanticKernel.KernelFunctionYaml.ToPromptTemplateConfig(agent.Value);
+                        //Assistant assistant = assistantClient.CreateAssistantFromTemplateAsync(config.AzureOpenAIChat.ModelName, templateConfig).GetAwaiter().GetResult();
+                        Assistant assistant = assistantClient.CreateAssistantAsync(
+                            config.AzureOpenAIChat.ModelName,
+                            "AutomationCrewLeader",
+                            instructions: 
+                            """
+                            You are a friendly and helpful agent that will connect to the right agent to automatically resolve the task that the employee is looking to do.
+                            You will also provide a list of other agents that can be used to automate the process.
+                            You will say the name of the agent to use for the next step in the task.
+                            If it cannot determine an agent to use, you will aim to answer the question from your own knowledge.
+                            You should not ask a question of the user.
+                            """,
+                            enableCodeInterpreter: true,
+                            temperature:0
+                            //codeInterpreterFileIds: [fileDataCountryList.Id, fileDataCountryDetail.Id]            
+                        ).GetAwaiter().GetResult();
+
+                        OpenAIAssistantAgent openAIAgent = new(assistant, assistantClient);
+                        agentList.Add(openAIAgent);
+
+                        assistant  = assistantClient.CreateAssistantAsync(
+                            config.AzureOpenAIChat.ModelName,
+                            "SignatureReviewer",
+                            instructions: 
+                            """
+                            A productive agent that checks the supplied image to confirm whether a signature has been applied.
+                            If no image is supplied, it will ask for one.
+                            If a document is supplied, it will check for a signature and return the result.
+                            If a image is supplied but it is not a valid image, it will ask for a valid image.
+                            """,
+                            enableCodeInterpreter: true,
+                            temperature:0
+                            //codeInterpreterFileIds: [fileDataCountryList.Id, fileDataCountryDetail.Id]            
+                        ).GetAwaiter().GetResult();
+                        
+                        openAIAgent = new(assistant, assistantClient);
+                        agentList.Add(openAIAgent);
+
+                        assistant  = assistantClient.CreateAssistantAsync(
+                            config.AzureOpenAIChat.ModelName,
+                            "LeaveReviewer",
+                            instructions: 
+                            """
+                            A strict agent that reviews requests for leave and looks at whether it fits one of the types of leave below.
+                            - Annual leave - used for most leave requests and used for holidays and standard time off.
+                            - Sick leave - used when an employee is unable to work due to illness or injury.
+                            - Family leave - used when an employee needs to take time off to care for a family member.
+                            - Bereavement leave - used when an employee needs to take time off due to the death of a loved one.
+                            - Personal leave - used when an employee needs to take time off for personal reasons that do not fall under other categories.
+                            - Unpaid leave - used when an employee needs to take time off without pay.
+                            - Maternity leave - used when an employee is taking time off for the birth or adoption of a child.
+                            - Paternity leave - used when an employee is taking time off for the birth or adoption of a child.
+                            - Parental leave - used when an employee is taking time off to care for a child.
+                            - Military leave - used when an employee is called to active duty or training in the military.
+                            - Jury duty leave - used when an employee is called to serve on a jury or as a witness in a legal proceeding.
+                            - Voting leave - used when an employee needs time off to vote in an election.
+                            - Leave of absence - used when an employee needs to take time off for an extended period of time.
+                            - Compensatory leave - used when an employee is given time off in lieu of overtime worked.
+                            - Study leave - used when an employee is taking time off to study or attend classes.
+                            - Sabbatical leave - used when an employee is taking an extended period of time off for personal or professional development.
+                            """,
+                            enableCodeInterpreter: true,
+                            temperature:0
+                            //codeInterpreterFileIds: [fileDataCountryList.Id, fileDataCountryDetail.Id]            
+                        ).GetAwaiter().GetResult();
+                        
+                        openAIAgent = new(assistant, assistantClient);
+                        agentList.Add(openAIAgent);
+                    //}
+
+                    string selectionStrategyText = EmbeddedResource.Read("PromptFunction-SelectionStrategy.yaml");
+                    KernelFunction selectionFunction = AgentGroupChat.CreatePromptFunctionForStrategy(selectionStrategyText, safeParameterNames: "history");
+
+                    // Define the selection strategy
+                    KernelFunctionSelectionStrategy selectionStrategy = new(selectionFunction, kernel)
                     {
-                        Kernel = kernel,
-                    });
+                        // Always start with the writer agent.
+                        InitialAgent = agentList[0],
+                        // Parse the function response.
+                        ResultParser = (result) => result.GetValue<string>() ?? agentList[0].Name,
+                        // The prompt variable name for the history argument.
+                        HistoryVariableName = "history",
+                        // Save tokens by not including the entire history in the prompt
+                        HistoryReducer = new ChatHistoryTruncationReducer(3),
+                    };
 
+                    string terminationStrategyText = EmbeddedResource.Read("PromptFunction-TerminationStrategy.yaml");
+                    KernelFunction terminationFunction = AgentGroupChat.CreatePromptFunctionForStrategy(terminationStrategyText, safeParameterNames: "history");
+
+                    // Define the termination strategy
+                    KernelFunctionTerminationStrategy terminationStrategy =
+                      new(terminationFunction, kernel)
+                      {
+                          // Only the reviewer may give approval.
+                          Agents = agentList,
+                          // Parse the function response.
+                          ResultParser = (result) =>
+                            result.GetValue<string>()?.Contains("true", StringComparison.OrdinalIgnoreCase) ?? false,
+                          // The prompt variable name for the history argument.
+                          HistoryVariableName = "history",
+                          // Save tokens by not including the entire history in the prompt
+                          HistoryReducer = new ChatHistoryTruncationReducer(4),
+                          // Limit total number of turns no matter what
+                          MaximumIterations = 5,
+                      };
+
+                    AgentGroupChat chat = new(agentList.ToArray())
+                    {
+                        ExecutionSettings =
+                            new()
+                            {
+                                TerminationStrategy = terminationStrategy
+                            }
+                    };
+                    return chat;
                 }
-
-                KernelFunction selectionFunction = AgentGroupChat.CreatePromptFunctionForStrategy(
-                    $$$"""
-                    State the name of the next participant in the conversation based on the following rules:
-                    The first participant should be the AutomationCrewLeader who will take the lead in the conversation.
-                    If the AutomationCrewLeader was the last person to speak, the next participant should be taken from theit suggestion.
-                    If the next participant cannot be determined from the AutomationCrewLeader, the next participant should be the determined with the following guidance:
-                    - If the request is about a submitted document, send it to SignatureReviewer to review it.
-
-                    History:
-                    {{$history}}
-                    """,
-                    safeParameterNames: "history");
-
-                // Define the selection strategy
-                KernelFunctionSelectionStrategy selectionStrategy = new(selectionFunction, kernel)
+                catch (Exception ex)
                 {
-                    // Always start with the writer agent.
-                    InitialAgent = agentList[0],
-                    // Parse the function response.
-                    ResultParser = (result) => result.GetValue<string>() ?? agentList[0].Name,
-                    // The prompt variable name for the history argument.
-                    HistoryVariableName = "history",
-                    // Save tokens by not including the entire history in the prompt
-                    HistoryReducer = new ChatHistoryTruncationReducer(3),
-                };
-
-                KernelFunction terminationFunction =
-    AgentGroupChat.CreatePromptFunctionForStrategy(
-        $$$"""
-        Determine if the agent asks a question or says the task is complete.
-        If either of these are true, return "true".
-        If the agent says the task is not complete or there is no question, return "false".
-
-        History:
-        {{$history}}
-        """,
-        safeParameterNames: "history");
-
-                // Define the termination strategy
-                KernelFunctionTerminationStrategy terminationStrategy =
-                  new(terminationFunction, kernel)
-                  {
-                      // Only the reviewer may give approval.
-                      Agents = agentList,
-                      // Parse the function response.
-                      ResultParser = (result) =>
-                        result.GetValue<string>()?.Contains("true", StringComparison.OrdinalIgnoreCase) ?? false,
-                      // The prompt variable name for the history argument.
-                      HistoryVariableName = "history",
-                      // Save tokens by not including the entire history in the prompt
-                      HistoryReducer = new ChatHistoryTruncationReducer(4),
-                      // Limit total number of turns no matter what
-                      MaximumIterations = 5,
-                  };
-
-                AgentGroupChat chat = new(agentList.ToArray())
-                {
-                    ExecutionSettings =
-                        new()
-                        {
-                            TerminationStrategy = terminationStrategy
-                        }
-                };
-                return chat;
+                    Console.WriteLine($"Error creating agent: {ex.Message}");
+                    throw;
+                }
             });
 
         /*}
@@ -345,17 +408,20 @@ public static class Program
         foreach (var resourceName in resourceNames)
         {
             Console.WriteLine($"Resource Name: {resourceName}");
-
-            // Read the resource stream
-            using (var stream = assembly.GetManifestResourceStream(resourceName))
+            // Only add resources that have the Agent prefix
+            if (resourceName.StartsWith("AutomatedAgentsDemo.ApiService.Resources.Agent"))
             {
-                if (stream != null)
+                // Read the resource stream
+                using (var stream = assembly.GetManifestResourceStream(resourceName))
                 {
-                    using (var reader = new System.IO.StreamReader(stream))
+                    if (stream != null)
                     {
-                        var content = reader.ReadToEnd();
-                        Console.WriteLine($"Content of {resourceName}:\n{content}");
-                        agents.Add(resourceName, content);
+                        using (var reader = new System.IO.StreamReader(stream))
+                        {
+                            var content = reader.ReadToEnd();
+                            Console.WriteLine($"Content of {resourceName}:\n{content}");
+                            agents.Add(resourceName, content);
+                        }
                     }
                 }
             }

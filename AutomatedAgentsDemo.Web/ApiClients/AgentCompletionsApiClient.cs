@@ -71,7 +71,16 @@ internal sealed class AgentCompletionsApiClient
         }
 
         // Keep original prompt and agent response to maintain chat history
-        this._chatHistory.AddUserMessage(prompt);
+        byte[] bytes = File.ReadAllBytes("C:\\Users\\kevin.mcdonnell\\Downloads\\Kevin Passport.jpeg");
+
+        // Add a user message with both the image and a question
+        // about the image.
+        this._chatHistory.AddUserMessage(
+        [
+            new TextContent(prompt),
+            new ImageContent(bytes, "image/jpeg"),
+        ]);
+        //this._chatHistory.AddUserMessage(prompt);
         this._chatHistory.AddAssistantMessage(builder.ToString());
     }
 

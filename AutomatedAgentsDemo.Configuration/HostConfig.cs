@@ -40,6 +40,10 @@ public sealed class HostConfig
 
     private readonly AzureAISearchConfig _azureAISearchConfig = new();
 
+    private readonly string _azureOpenAIConnectionString = string.Empty;
+
+    private readonly string _azureOpenAIEndpoint = string.Empty;
+
     private readonly RagConfig _ragConfig = new();
 
     /// <summary>
@@ -68,8 +72,26 @@ public sealed class HostConfig
             .Bind(this._ragConfig);
         configurationManager
             .Bind(this);
-//        this.Az configurationManager.GetConnectionString("AzureOpenAI");
+
+        this._azureOpenAIConnectionString = configurationManager.GetConnectionString(AzureOpenAIConnectionStringName);
+        this._azureOpenAIEndpoint = ExtractEndpoint(this._azureOpenAIConnectionString);
         this._configurationManager = configurationManager;
+    }
+
+    private static string ExtractEndpoint(string connectionString)
+    {
+        if (string.IsNullOrWhiteSpace(connectionString)) return string.Empty;
+
+        var parts = connectionString.Split(';');
+        foreach (var part in parts)
+        {
+            var kv = part.Split('=', 2);
+            if (kv.Length == 2 && kv[0].Trim().Equals("Endpoint", StringComparison.OrdinalIgnoreCase))
+            {
+                return kv[1].Trim();
+            }
+        }
+        return string.Empty;
     }
 
     /// <summary>
@@ -107,4 +129,7 @@ public sealed class HostConfig
     /// The RAG configuration.
     /// </summary>
     public RagConfig Rag => this._ragConfig;
+
+    public string AzureOpenAIConnectionString => this._azureOpenAIConnectionString;
+    public string AzureOpenAIEndpoint => this._azureOpenAIEndpoint;
 }
